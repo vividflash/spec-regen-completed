@@ -28,12 +28,16 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * The bundled clips the plugin can play. Each one is a 16 bit PCM WAV in the
+ * The bundled clips the plugin can play. Public because RuneLite implements
+ * the config interface with a JDK dynamic proxy, which cannot reach a
+ * package-private return type and throws IllegalAccessError on first read.
+ *
+ * <p>The bundled clips the plugin can play. Each one is a 16 bit PCM WAV in the
  * plugin jar, loaded the first time it is picked.
  */
 @Getter
 @RequiredArgsConstructor
-enum SpecSound
+public enum SpecSound
 {
     ONE("Sound 1", "specready1.wav"),
     TWO("Sound 2", "specready2.wav"),

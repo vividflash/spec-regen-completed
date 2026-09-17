@@ -161,16 +161,24 @@ public class SpecRegenCompletedPlugin extends Plugin
             return;
         }
 
-        int required = requiredEnergy();
-        if (required <= 0)
-        {
-            return;
-        }
-
-        if (previous < required && energy >= required)
+        if (crossed(previous, energy, requiredEnergy()))
         {
             play();
         }
+    }
+
+    /**
+     * True when a regen step took the bar from below a weapon's cost to at or
+     * above it, which is the one thing that plays a sound. A required of 0 means
+     * the weapon has no special attack this plugin knows, and NO_READING means
+     * there is no earlier reading to compare against.
+     */
+    private static boolean crossed(int previous, int energy, int required)
+    {
+        return required > 0
+            && previous != NO_READING
+            && previous < required
+            && energy >= required;
     }
 
     @Subscribe
