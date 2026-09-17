@@ -1,0 +1,45 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.vividflash'
+version = '0.1'
+
+def runeLiteVersion = '1.12.38'
+
+repositories {
+    mavenLocal()
+    maven {
+        url = 'https://repo.runelite.net'
+    }
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly group: 'net.runelite', name: 'client', version: runeLiteVersion
+    compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.30'
+    annotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.30'
+
+    testImplementation group: 'net.runelite', name: 'client', version: runeLiteVersion
+    testImplementation group: 'net.runelite', name: 'jshell', version: runeLiteVersion
+    testImplementation group: 'junit', name: 'junit', version: '4.13.2'
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    options.release = 11
+}
+
+test {
+    useJUnit()
+}
+
+tasks.register('run', JavaExec) {
+    dependsOn testClasses
+    mainClass = 'com.vividflash.specregencompleted.SpecRegenCompletedPluginTest'
+    classpath = sourceSets.test.runtimeClasspath
+    enableAssertions = true
+    if (project.hasProperty('devMode')) {
+        args '--developer-mode'
+    }
+}
