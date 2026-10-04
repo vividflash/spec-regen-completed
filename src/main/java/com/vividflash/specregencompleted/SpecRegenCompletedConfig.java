@@ -48,7 +48,7 @@ public interface SpecRegenCompletedConfig extends Config
     @ConfigItem(
         keyName = "volume",
         name = "Volume",
-        description = "0 plays nothing.",
+        description = "",
         position = 1
     )
     @Range(min = 0, max = 100)

@@ -13,7 +13,7 @@ their ornament-kit, corrupted, recoloured and charge-tier forms.
 
 ## Settings
 
-- **Sound**, one of five bundled clips, default Sound 1.
-- **Volume**, 0 to 100, default 50. At 0 the plugin plays nothing.
+- **Sound**: `Sound 1` to `Sound 5`. Default `Sound 1`.
+- **Volume**: 0 to 100. Default `50`. At 0 the plugin plays nothing.
 
 Type `::specready` in chat to hear the current sound at the current volume.
