@@ -38,7 +38,7 @@ public interface SpecRegenCompletedConfig extends Config
         keyName = "sound",
         name = "Sound",
         description = "",
-        position = 0
+        position = 10
     )
     default SpecSound sound()
     {
@@ -49,7 +49,7 @@ public interface SpecRegenCompletedConfig extends Config
         keyName = "volume",
         name = "Volume",
         description = "",
-        position = 1
+        position = 20
     )
     @Range(min = 0, max = 100)
     default int volume()

@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'com.vividflash'
-version = '1.0.1'
+version = '1.0.2'
 
 def runeLiteVersion = '1.13.1'
 
@@ -32,14 +32,4 @@ tasks.withType(JavaCompile) {
 
 test {
     useJUnit()
-}
-
-tasks.register('run', JavaExec) {
-    dependsOn testClasses
-    mainClass = 'com.vividflash.specregencompleted.SpecRegenCompletedPluginTest'
-    classpath = sourceSets.test.runtimeClasspath
-    enableAssertions = true
-    if (project.hasProperty('devMode')) {
-        args '--developer-mode'
-    }
 }
