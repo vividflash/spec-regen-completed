@@ -55,7 +55,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 @Slf4j
 @PluginDescriptor(
     name = "Spec Regen Completed",
-    description = "Plays a sound when your special attack energy reaches your weapon's cost",
+    description = "Plays a sound when your spec is ready.",
     tags = {"special", "attack", "spec", "energy", "sound", "audio", "alert", "combat"}
 )
 public class SpecRegenCompletedPlugin extends Plugin
@@ -107,6 +107,7 @@ public class SpecRegenCompletedPlugin extends Plugin
 
         running = true;
         lastEnergy = NO_READING;
+        log.debug("[config] startUp volume={} sound={}", config.volume(), config.sound());
 
         // Enabling the plugin part-way through a regen still has to catch the
         // next crossing, so take a starting reading rather than waiting for the
@@ -116,6 +117,7 @@ public class SpecRegenCompletedPlugin extends Plugin
             if (client.getGameState() == GameState.LOGGED_IN)
             {
                 lastEnergy = client.getVarpValue(VarPlayerID.SA_ENERGY);
+                log.debug("[state] starting reading energy={}", lastEnergy);
             }
         });
     }
@@ -128,6 +130,7 @@ public class SpecRegenCompletedPlugin extends Plugin
         // audio line itself is the client's to release: AudioPlayer hands out a
         // self-closing one.
         running = false;
+        log.debug("[state] shutDown");
         loadedSounds.clear();
         lastEnergy = NO_READING;
     }
@@ -136,10 +139,19 @@ public class SpecRegenCompletedPlugin extends Plugin
     public void onGameStateChanged(GameStateChanged event)
     {
         // A hop or a logout leaves a stale reading behind, and the fresh varps
-        // arriving on the next login would then read as a regen.
-        if (event.getGameState() != GameState.LOGGED_IN)
+        // arriving on the next login would then read as a regen. A loading
+        // screen (teleport, instance) keeps the reading: the energy varp is not
+        // resent on a map load, so the next regen still has its previous value.
+        switch (event.getGameState())
         {
-            lastEnergy = NO_READING;
+            case LOGIN_SCREEN:
+            case HOPPING:
+            case CONNECTION_LOST:
+                log.debug("[state] game state {}, energy reading reset", event.getGameState());
+                lastEnergy = NO_READING;
+                break;
+            default:
+                break;
         }
     }
 
@@ -161,8 +173,10 @@ public class SpecRegenCompletedPlugin extends Plugin
             return;
         }
 
-        if (crossed(previous, energy, requiredEnergy()))
+        int required = requiredEnergy();
+        if (crossed(previous, energy, required))
         {
+            log.debug("[spec] crossed required={} previous={} energy={}", required, previous, energy);
             play();
         }
     }
@@ -191,11 +205,13 @@ public class SpecRegenCompletedPlugin extends Plugin
 
         if (config.volume() <= 0)
         {
+            log.debug("[preview] ::{} blocked, volume is 0", PREVIEW_COMMAND);
             client.addChatMessage(ChatMessageType.GAMEMESSAGE, "",
                 "Spec Regen Completed plays nothing while its volume is 0.", null);
             return;
         }
 
+        log.debug("[preview] ::{} playing", PREVIEW_COMMAND);
         play();
     }
 
@@ -228,6 +244,7 @@ public class SpecRegenCompletedPlugin extends Plugin
         int volume = config.volume();
         if (volume <= 0)
         {
+            log.debug("[sound] skipped, volume is 0");
             return;
         }
 
@@ -249,10 +266,12 @@ public class SpecRegenCompletedPlugin extends Plugin
         // dB figure is only for a clip this parser could not scale itself.
         float gainDb = scaled == null ? (float) Math.max(-80.0, 20.0 * Math.log10(amplitude)) : 0f;
 
+        log.debug("[sound] playing sound={} volume={} scaled={} gainDb={}", config.sound(), volume, scaled != null, gainDb);
         submit(() ->
         {
             if (!running)
             {
+                log.debug("[sound] dropped, plugin is shut down");
                 return;
             }
 
@@ -306,6 +325,7 @@ public class SpecRegenCompletedPlugin extends Plugin
 
             byte[] bytes = in.readAllBytes();
             loadedSounds.put(sound, bytes);
+            log.debug("[sound] loaded {} bytes={}", sound.getResource(), bytes.length);
             return bytes;
         }
         catch (IOException e)

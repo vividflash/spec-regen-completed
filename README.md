@@ -8,7 +8,7 @@ dragon dagger sounds at 25 percent and an Armadyl godsword at 50 percent. It
 sounds once per crossing: a dagger going 15 to 25 or 20 to 30 plays, 50 to 60
 does not, because the energy was already past 25.
 
-Weapons with no special attack are silent. 91 weapons are covered, including
+Weapons with no special attack are silent. 93 weapons are covered, including
 their ornament-kit, corrupted, recoloured and charge-tier forms.
 
 ## Settings
