@@ -32,7 +32,7 @@ import lombok.RequiredArgsConstructor;
  * the config interface with a JDK dynamic proxy, which cannot reach a
  * package-private return type and throws IllegalAccessError on first read.
  *
- * <p>The bundled clips the plugin can play. Each one is a 16 bit PCM WAV in the
+ * <p>Each one is a 16 bit PCM WAV in the
  * plugin jar, loaded the first time it is picked.
  */
 @Getter
