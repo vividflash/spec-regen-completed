@@ -25,6 +25,7 @@
 package com.vividflash.specregencompleted;
 
 import com.google.inject.Provides;
+import java.awt.Color;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,8 +46,12 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.VarPlayerID;
+import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.audio.AudioPlayer;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.chat.ChatMessageBuilder;
+import net.runelite.client.chat.ChatMessageManager;
+import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -55,7 +60,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 @Slf4j
 @PluginDescriptor(
     name = "Spec Regen Completed",
-    description = "Plays a sound when your spec is ready.",
+    description = "Plays a sound when your special attack is ready.",
     tags = {"special", "attack", "spec", "energy", "sound", "audio", "alert", "combat"}
 )
 public class SpecRegenCompletedPlugin extends Plugin
@@ -64,6 +69,16 @@ public class SpecRegenCompletedPlugin extends Plugin
 
     /** SA_ENERGY counts tenths of a percent, so a full bar reads 1000. */
     private static final int ENERGY_PER_PERCENT = 10;
+
+    private static final int FULL_ENERGY = 100 * ENERGY_PER_PERCENT;
+
+    private static final String LAST_SEEN_VERSION_KEY = "lastSeenVersion";
+
+    private static final String VERSION = "1.1";
+    private static final String UPDATE_MESSAGE =
+        "Spec Regen Completed v1.1: Implemented liquid adrenaline cost halving, new option to play at full spec.";
+
+    private static final Color NOTICE_COLOR = new Color(0x480000);
 
     /** No reading taken yet, so there is nothing to compare a change against. */
     private static final int NO_READING = -1;
@@ -83,9 +98,16 @@ public class SpecRegenCompletedPlugin extends Plugin
     @Inject
     private ScheduledExecutorService executor;
 
+    @Inject
+    private ConfigManager configManager;
+
+    @Inject
+    private ChatMessageManager chatMessageManager;
+
     private final Map<SpecSound, byte[]> loadedSounds = new EnumMap<>(SpecSound.class);
 
     private volatile boolean running;
+    private boolean updateChecked;
     private int lastEnergy = NO_READING;
 
     @Provides
@@ -150,8 +172,38 @@ public class SpecRegenCompletedPlugin extends Plugin
                 log.debug("[state] game state {}, energy reading reset", event.getGameState());
                 lastEnergy = NO_READING;
                 break;
+            case LOGGED_IN:
+                maybeAnnounceUpdate();
+                break;
             default:
                 break;
+        }
+    }
+
+    /**
+     * One-time notice on the first login with a new VERSION. A profile with no
+     * recorded version is told as well.
+     */
+    private void maybeAnnounceUpdate()
+    {
+        if (updateChecked)
+        {
+            return;
+        }
+        updateChecked = true;
+
+        String lastSeen = configManager.getConfiguration(SpecRegenCompletedConfig.GROUP, LAST_SEEN_VERSION_KEY);
+        configManager.setConfiguration(SpecRegenCompletedConfig.GROUP, LAST_SEEN_VERSION_KEY, VERSION);
+
+        log.debug("[update] lastSeen={} current={}", lastSeen, VERSION);
+        if (!VERSION.equals(lastSeen))
+        {
+            chatMessageManager.queue(QueuedMessage.builder()
+                .type(ChatMessageType.CONSOLE)
+                .runeLiteFormattedMessage(new ChatMessageBuilder()
+                    .append(NOTICE_COLOR, UPDATE_MESSAGE)
+                    .build())
+                .build());
         }
     }
 
@@ -177,6 +229,12 @@ public class SpecRegenCompletedPlugin extends Plugin
         if (crossed(previous, energy, required))
         {
             log.debug("[spec] crossed required={} previous={} energy={}", required, previous, energy);
+            play();
+        }
+        else if (config.playAtFull() && previous < FULL_ENERGY && energy >= FULL_ENERGY
+            && (required > 0 || config.playAtFullWithoutSpecWeapon()))
+        {
+            log.debug("[spec] bar full previous={} required={}", previous, required);
             play();
         }
     }
@@ -236,7 +294,23 @@ public class SpecRegenCompletedPlugin extends Plugin
         }
 
         SpecWeapon spec = SpecWeapon.forItemId(weapon.getId());
-        return spec == null ? 0 : spec.getCostPercent() * ENERGY_PER_PERCENT;
+        if (spec == null)
+        {
+            return 0;
+        }
+
+        int required = spec.getCostPercent() * ENERGY_PER_PERCENT;
+
+        // Liquid adrenaline (Tombs of Amascut) halves every special attack's
+        // cost while it lasts. Every cost is a whole percent, so half of it is
+        // still a whole number of SA_ENERGY units.
+        if (client.getVarbitValue(VarbitID.TOA_MIDRAIDLOOT_ENERGY_ACTIVE) != 0)
+        {
+            log.debug("[spec] liquid adrenaline active, cost {} halved", required);
+            return required / 2;
+        }
+
+        return required;
     }
 
     private void play()

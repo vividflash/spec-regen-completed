@@ -56,4 +56,26 @@ public interface SpecRegenCompletedConfig extends Config
     {
         return 50;
     }
+
+    @ConfigItem(
+        keyName = "playAtFull",
+        name = "Play Again at Full",
+        description = "Also plays the sound when the bar reaches 100 percent.",
+        position = 3
+    )
+    default boolean playAtFull()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+        keyName = "playAtFullWithoutSpecWeapon",
+        name = "Play Without Spec Weapon Equipped",
+        description = "Lets Play Again at Full play when the equipped weapon has no special attack.",
+        position = 6
+    )
+    default boolean playAtFullWithoutSpecWeapon()
+    {
+        return false;
+    }
 }

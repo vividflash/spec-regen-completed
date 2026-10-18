@@ -8,11 +8,19 @@ dragon dagger sounds at 25 percent and an Armadyl godsword at 50 percent. It
 sounds once per crossing: a dagger going 15 to 25 or 20 to 30 plays, 50 to 60
 does not, because the energy was already past 25.
 
+While Liquid adrenaline from the Tombs of Amascut is active, every cost is
+halved, so a dragon dagger sounds at 12.5 percent.
+
 Weapons with no special attack are silent. 93 weapons are covered, including
 their ornament-kit, corrupted, recoloured and charge-tier forms.
 
-## Settings
+## Features
 
+- **Play Again at Full**: also plays the sound when the bar reaches 100 percent
+  with a spec weapon equipped. Default `off`. A step that crosses the cost and
+  fills the bar at once plays one sound.
+- **Play Without Spec Weapon Equipped**: lets **Play Again at Full** play with
+  any weapon or none. Default `off`.
 - **Sound**: `Sound 1` to `Sound 5`. Default `Sound 1`.
 - **Volume**: 0 to 100. Default `50`. At 0 the plugin plays nothing.
 
