@@ -29,35 +29,34 @@ import java.util.Map;
 import lombok.Getter;
 import net.runelite.api.gameval.ItemID;
 
-/**
- * Weapons with a special attack, and the energy each costs as a percentage of a
- * full bar. Cosmetic recolours, ornament-kit forms, charge tiers and game-mode
- * variants share their weapon's entry, since they share its cost.
- *
- * <p>Costs come from the special attack list on the Old School RuneScape Wiki.
- * Item ids come from matching each weapon's in-game item name against the
- * client's own item cache, so a form the game names differently from its base
- * weapon, as a volcanic abyssal whip or a dragon felling axe is, still lands on
- * the right cost.
- */
-@Getter
+// Weapons with a special attack, and the energy each costs as a percentage of a full bar. Cosmetic
+// recolours, ornament-kit forms, charge tiers and game-mode variants share their weapon's entry,
+// since they share its cost.
+//
+// Costs come from the special attack list on the Old School RuneScape Wiki. Item ids come from
+// matching each weapon's in-game item name against the client's own item cache, so a form the game
+// names differently from its base weapon, as a volcanic abyssal whip or a dragon felling axe is,
+// still lands on the right cost.
 enum SpecWeapon
 {
     ABYSSAL_BLUDGEON(50, ItemID.ABYSSAL_BLUDGEON, ItemID.ABYSSAL_BLUDGEON_1,
         ItemID.ABYSSAL_BLUDGEON_2, ItemID.ABYSSAL_BLUDGEON_3),
     ABYSSAL_DAGGER(25, ItemID.ABYSSAL_DAGGER, ItemID.ABYSSAL_DAGGER_P, ItemID.ABYSSAL_DAGGER_P_,
         ItemID.ABYSSAL_DAGGER_P__, ItemID.BH_ABYSSAL_DAGGER_IMBUE),
-    ABYSSAL_TENTACLE(50, ItemID.ABYSSAL_TENTACLE, ItemID.LEAGUE_3_WHIP_TENTACLE),
+    ABYSSAL_TENTACLE(50, ItemID.ABYSSAL_TENTACLE, ItemID.LEAGUE_3_WHIP_TENTACLE,
+        ItemID.BR_ABYSSAL_TENTACLE),
     ABYSSAL_WHIP(50, ItemID.ABYSSAL_WHIP, ItemID.ABYSSAL_WHIP_LAVA, ItemID.ABYSSAL_WHIP_ICE,
         ItemID.BR_ABYSSAL_WHIP, ItemID.LEAGUE_3_WHIP),
     ACCURSED_SCEPTRE(50, ItemID.WILD_CAVE_ACCURSED_CHARGED,
         ItemID.WILD_CAVE_ACCURSED_CHARGED_RECOL),
     ANCIENT_GODSWORD(50, ItemID.ANCIENT_GODSWORD, ItemID.BR_ANCIENT_GODSWORD),
+    ANCIENT_MACE(100, ItemID.ANCIENT_GOBLIN_MACE),
     ARCLIGHT(50, ItemID.ARCLIGHT),
     ARKAN_BLADE(30, ItemID.ARKAN_BLADE),
     ARMADYL_CROSSBOW(50, ItemID.ACB, ItemID.BR_ACB),
     ARMADYL_GODSWORD(50, ItemID.AGS, ItemID.AGSG, ItemID.BR_AGS, ItemID.ROTTEN_AGS),
     BANDOS_GODSWORD(50, ItemID.BGS, ItemID.BGSG),
+    BARRELCHEST_ANCHOR(50, ItemID.BRAIN_ANCHOR, ItemID.BH_BRAIN_ANCHOR_IMBUE),
     BLISTERWOOD_FLAIL(10, ItemID.BLISTERWOOD_FLAIL),
     BLUE_MOON_SPEAR(50, ItemID.FROSTMOON_SPEAR, ItemID.BR_FROSTMOON_SPEAR),
     BONE_DAGGER(75, ItemID.DTTD_BONE_DAGGER, ItemID.DTTD_BONE_DAGGER_P, ItemID.DTTD_BONE_DAGGER_P_,
@@ -80,6 +79,7 @@ enum SpecWeapon
     DARK_BOW(55, ItemID.DARKBOW, ItemID.DARKBOW_GREEN, ItemID.DARKBOW_BLUE, ItemID.DARKBOW_YELLOW,
         ItemID.DARKBOW_WHITE, ItemID.BR_DARKBOW, ItemID.BH_DARKBOW_IMBUE),
     DINH_S_BULWARK(50, ItemID.DINHS_BULWARK, ItemID.DINHS_BULWARK_ORNAMENT),
+    DORGESHUUN_CROSSBOW(75, ItemID.DTTD_BONE_CROSSBOW),
     DRAGON_2H_SWORD(60, ItemID.DRAGON_2H_SWORD, ItemID.BR_DRAGON_2H,
         ItemID.BH_DRAGON_2H_SWORD_CORRUPTED),
     DRAGON_AXE(100, ItemID.DRAGON_AXE, ItemID.TRAILBLAZER_AXE_NO_INFERNAL, ItemID.DRAGON_AXE_2H,
@@ -87,11 +87,15 @@ enum SpecWeapon
     DRAGON_BATTLEAXE(100, ItemID.DRAGON_BATTLEAXE, ItemID.BH_DRAGON_BATTLEAXE_CORRUPTED),
     DRAGON_CLAWS(50, ItemID.DRAGON_CLAWS, ItemID.BR_DRAGON_CLAWS, ItemID.DRAGON_CLAWS_ORNAMENT,
         ItemID.BH_DRAGON_CLAWS_CORRUPTED),
+    DRAGON_CROSSBOW(60, ItemID.XBOWS_CROSSBOW_DRAGON, ItemID.BH_XBOWS_CROSSBOW_DRAGON_CORRUPTED,
+        ItemID.BR_XBOWS_CROSSBOW_DRAGON),
     DRAGON_DAGGER(25, ItemID.DRAGON_DAGGER, ItemID.DRAGON_DAGGER_P, ItemID.DRAGON_DAGGER_P_,
         ItemID.DRAGON_DAGGER_P__, ItemID.BR_DRAGON_DAGGER, ItemID.BH_DRAGON_DAGGER_CORRUPTED),
     DRAGON_HALBERD(30, ItemID.DRAGON_HALBERD, ItemID.BH_DRAGON_HALBERD_CORRUPTED),
     DRAGON_HARPOON(100, ItemID.DRAGON_HARPOON, ItemID.TRAILBLAZER_HARPOON_NO_INFERNAL,
         ItemID.TRAILBLAZER_RELOADED_HARPOON_NO_INFERNAL),
+    DRAGON_HASTA(100, ItemID.BRUT_DRAGON_SPEAR, ItemID.BRUT_DRAGON_SPEAR_P,
+        ItemID.BRUT_DRAGON_SPEAR_P_, ItemID.BRUT_DRAGON_SPEAR_P__, ItemID.BRUT_DRAGON_SPEAR_KP),
     DRAGON_KNIFE(25, ItemID.DRAGON_KNIFE, ItemID.DRAGON_KNIFE_P, ItemID.DRAGON_KNIFE_P_,
         ItemID.DRAGON_KNIFE_P__, ItemID.BR_DRAGON_KNIFE),
     DRAGON_LONGSWORD(25, ItemID.DRAGON_LONGSWORD, ItemID.BH_DRAGON_LONGSWORD_IMBUE,
@@ -117,8 +121,9 @@ enum SpecWeapon
     EXCALIBUR(100, ItemID.EXCALIBUR),
     EYE_OF_AYAK(50, ItemID.EYE_OF_AYAK),
     GRANITE_HAMMER(60, ItemID.GRANITE_HAMMER),
-    GRANITE_MAUL(60, ItemID.GRANITE_MAUL, ItemID.GRANITE_MAUL_PRETTY, ItemID.BR_GRANITE_MAUL),
-    GRANITE_MAUL_ORNATE_HANDLE(50, ItemID.GRANITE_MAUL_PLUS, ItemID.GRANITE_MAUL_PRETTY_PLUS),
+    GRANITE_MAUL(60, ItemID.GRANITE_MAUL, ItemID.GRANITE_MAUL_PRETTY),
+    GRANITE_MAUL_ORNATE_HANDLE(50, ItemID.BR_GRANITE_MAUL, ItemID.GRANITE_MAUL_PLUS,
+        ItemID.GRANITE_MAUL_PRETTY_PLUS),
     HALLOWED_FLAIL(10, ItemID.HALLOWED_FLAIL),
     HEAVY_BALLISTA(65, ItemID.HEAVY_BALLISTA, ItemID.BR_HEAVY_BALLISTA,
         ItemID.HEAVY_BALLISTA_ORNAMENT),
@@ -135,6 +140,7 @@ enum SpecWeapon
     KERIS_PARTISAN_OF_CORRUPTION(75, ItemID.KERIS_PARTISAN_CORRUPTION),
     KERIS_PARTISAN_OF_THE_SUN(75, ItemID.KERIS_PARTISAN_SUN),
     LIGHT_BALLISTA(65, ItemID.LIGHT_BALLISTA, ItemID.BR_LIGHT_BALLISTA),
+    MAGIC_COMP_BOW(35, ItemID.TRAIL_COMPOSITE_BOW_MAGIC),
     MAGIC_LONGBOW(35, ItemID.MAGIC_LONGBOW),
     MAGIC_SHORTBOW(55, ItemID.MAGIC_SHORTBOW, ItemID.BR_MAGIC_BOW),
     MAGIC_SHORTBOW_I(50, ItemID.MAGIC_SHORTBOW_I),
@@ -153,6 +159,7 @@ enum SpecWeapon
     SARADOMIN_S_BLESSED_SWORD(65, ItemID.BLESSED_SARADOMIN_SWORD,
         ItemID.BLESSED_SARADOMIN_SWORD_DEGRADED),
     SCORCHING_BOW(25, ItemID.SCORCHING_BOW),
+    SEERCULL(100, ItemID.DAGANOTH_CAVE_MAGIC_SHORTBOW),
     SOULFLAME_HORN(25, ItemID.SOULFLAME_HORN),
     STAFF_OF_BALANCE(100, ItemID.STAFF_OF_BALANCE),
     STAFF_OF_LIGHT(100, ItemID.STAFF_OF_LIGHT),
@@ -173,8 +180,11 @@ enum SpecWeapon
     VOLATILE_NIGHTMARE_STAFF(55, ItemID.NIGHTMARE_STAFF_VOLATILE,
         ItemID.BR_NIGHTMARE_STAFF_VOLATILE),
     WEBWEAVER_BOW(50, ItemID.WILD_CAVE_WEBWEAVER_CHARGED),
+    ZAMORAKIAN_HASTA(25, ItemID.ZAMORAK_HASTA),
+    ZAMORAKIAN_SPEAR(25, ItemID.ZAMORAK_SPEAR),
     ZAMORAK_GODSWORD(50, ItemID.ZGS, ItemID.ZGSG),
     ZARYTE_CROSSBOW(75, ItemID.ZARYTE_XBOW, ItemID.BR_ZARYTE_XBOW),
+    ZORYA_S_TOME(50, ItemID.ZORYAS_TOME),
     ;
 
     private static final Map<Integer, SpecWeapon> BY_ITEM_ID = new HashMap<>();
@@ -190,6 +200,7 @@ enum SpecWeapon
         }
     }
 
+    @Getter
     private final int costPercent;
     private final int[] itemIds;
 
@@ -199,10 +210,7 @@ enum SpecWeapon
         this.itemIds = itemIds;
     }
 
-    /**
-     * The entry for a worn item id, or null when that item has no special
-     * attack.
-     */
+    // The entry for a worn item id, or null when that item has no special attack.
     static SpecWeapon forItemId(int itemId)
     {
         return BY_ITEM_ID.get(itemId);

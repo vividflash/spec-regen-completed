@@ -27,14 +27,11 @@ package com.vividflash.specregencompleted;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-/**
- * The bundled clips the plugin can play. Public because RuneLite implements
- * the config interface with a JDK dynamic proxy, which cannot reach a
- * package-private return type and throws IllegalAccessError on first read.
- *
- * <p>Each one is a 16 bit PCM WAV in the
- * plugin jar, loaded the first time it is picked.
- */
+// The bundled clips the plugin can play. Public because RuneLite implements the config interface
+// with a JDK dynamic proxy, which cannot reach a package-private return type and throws
+// IllegalAccessError on first read.
+//
+// Each one is a 16 bit PCM WAV in the plugin jar, loaded the first time it is picked.
 @Getter
 @RequiredArgsConstructor
 public enum SpecSound

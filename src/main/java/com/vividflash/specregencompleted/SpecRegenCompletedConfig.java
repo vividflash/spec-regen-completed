@@ -59,8 +59,8 @@ public interface SpecRegenCompletedConfig extends Config
 
     @ConfigItem(
         keyName = "playAtFull",
-        name = "Play Again at Full",
-        description = "Also plays the sound when the bar reaches 100 percent.",
+        name = "Play at 100% Energy",
+        description = "Additional to the Weapon depending alert",
         position = 3
     )
     default boolean playAtFull()
@@ -70,8 +70,8 @@ public interface SpecRegenCompletedConfig extends Config
 
     @ConfigItem(
         keyName = "playAtFullWithoutSpecWeapon",
-        name = "Play Without Spec Weapon Equipped",
-        description = "Lets Play Again at Full play when the equipped weapon has no special attack.",
+        name = "Also Without Spec Weapon",
+        description = "",
         position = 6
     )
     default boolean playAtFullWithoutSpecWeapon()

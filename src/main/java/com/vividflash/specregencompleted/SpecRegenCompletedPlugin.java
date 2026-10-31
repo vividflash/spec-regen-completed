@@ -29,8 +29,8 @@ import java.awt.Color;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.EnumMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
@@ -60,27 +60,27 @@ import net.runelite.client.plugins.PluginDescriptor;
 @Slf4j
 @PluginDescriptor(
     name = "Spec Regen Completed",
-    description = "Plays a sound when your special attack is ready.",
+    description = "Plays a Sound When Your Special Attack Is Ready",
     tags = {"special", "attack", "spec", "energy", "sound", "audio", "alert", "combat"}
 )
 public class SpecRegenCompletedPlugin extends Plugin
 {
     private static final String PREVIEW_COMMAND = "specready";
 
-    /** SA_ENERGY counts tenths of a percent, so a full bar reads 1000. */
+    // SA_ENERGY counts tenths of a percent, so a full bar reads 1000.
     private static final int ENERGY_PER_PERCENT = 10;
 
     private static final int FULL_ENERGY = 100 * ENERGY_PER_PERCENT;
 
     private static final String LAST_SEEN_VERSION_KEY = "lastSeenVersion";
 
-    private static final String VERSION = "1.1";
+    private static final String VERSION = "1.2";
     private static final String UPDATE_MESSAGE =
-        "Spec Regen Completed v1.1: Implemented liquid adrenaline cost halving, new option to play at full spec.";
+        "Spec Regen Completed v" + VERSION + ": Added 10 Weapons";
 
     private static final Color NOTICE_COLOR = new Color(0x480000);
 
-    /** No reading taken yet, so there is nothing to compare a change against. */
+    // No reading taken yet, so there is nothing to compare a change against.
     private static final int NO_READING = -1;
 
     @Inject
@@ -104,11 +104,16 @@ public class SpecRegenCompletedPlugin extends Plugin
     @Inject
     private ChatMessageManager chatMessageManager;
 
-    private final Map<SpecSound, byte[]> loadedSounds = new EnumMap<>(SpecSound.class);
+    // Filled on the executor, cleared by shutDown on another thread.
+    private final Map<SpecSound, byte[]> loadedSounds = new ConcurrentHashMap<>();
 
     private volatile boolean running;
     private boolean updateChecked;
     private int lastEnergy = NO_READING;
+
+    // Last state from GameStateChanged, kept only so the energy debug line can name it without a
+    // client read.
+    private GameState gameState;
 
     @Provides
     SpecRegenCompletedConfig provideConfig(ConfigManager configManager)
@@ -129,17 +134,24 @@ public class SpecRegenCompletedPlugin extends Plugin
 
         running = true;
         lastEnergy = NO_READING;
-        log.debug("[config] startUp volume={} sound={}", config.volume(), config.sound());
+        if (log.isDebugEnabled())
+        {
+            log.debug("[config] startUp volume={} sound={}", config.volume(), config.sound());
+        }
 
         // Enabling the plugin part-way through a regen still has to catch the
         // next crossing, so take a starting reading rather than waiting for the
         // varp to change twice.
         clientThread.invoke(() ->
         {
-            if (client.getGameState() == GameState.LOGGED_IN)
+            gameState = client.getGameState();
+            if (gameState == GameState.LOGGED_IN)
             {
                 lastEnergy = client.getVarpValue(VarPlayerID.SA_ENERGY);
-                log.debug("[state] starting reading energy={}", lastEnergy);
+                if (log.isDebugEnabled())
+                {
+                    log.debug("[state] starting reading energy={}", lastEnergy);
+                }
             }
         });
     }
@@ -164,12 +176,20 @@ public class SpecRegenCompletedPlugin extends Plugin
         // arriving on the next login would then read as a regen. A loading
         // screen (teleport, instance) keeps the reading: the energy varp is not
         // resent on a map load, so the next regen still has its previous value.
-        switch (event.getGameState())
+        gameState = event.getGameState();
+        if (log.isDebugEnabled())
+        {
+            log.debug("[spec] game state {} energy baseline={}", gameState, lastEnergy);
+        }
+        switch (gameState)
         {
             case LOGIN_SCREEN:
             case HOPPING:
             case CONNECTION_LOST:
-                log.debug("[state] game state {}, energy reading reset", event.getGameState());
+                if (log.isDebugEnabled())
+                {
+                    log.debug("[state] game state {}, energy reading reset", gameState);
+                }
                 lastEnergy = NO_READING;
                 break;
             case LOGGED_IN:
@@ -180,10 +200,8 @@ public class SpecRegenCompletedPlugin extends Plugin
         }
     }
 
-    /**
-     * One-time notice on the first login with a new VERSION. A profile with no
-     * recorded version is told as well.
-     */
+    // One-time notice on the first login with a new VERSION. A profile with no recorded version is
+    // told as well.
     private void maybeAnnounceUpdate()
     {
         if (updateChecked)
@@ -193,11 +211,14 @@ public class SpecRegenCompletedPlugin extends Plugin
         updateChecked = true;
 
         String lastSeen = configManager.getConfiguration(SpecRegenCompletedConfig.GROUP, LAST_SEEN_VERSION_KEY);
-        configManager.setConfiguration(SpecRegenCompletedConfig.GROUP, LAST_SEEN_VERSION_KEY, VERSION);
 
-        log.debug("[update] lastSeen={} current={}", lastSeen, VERSION);
+        if (log.isDebugEnabled())
+        {
+            log.debug("[update] lastSeen={} current={}", lastSeen, VERSION);
+        }
         if (!VERSION.equals(lastSeen))
         {
+            configManager.setConfiguration(SpecRegenCompletedConfig.GROUP, LAST_SEEN_VERSION_KEY, VERSION);
             chatMessageManager.queue(QueuedMessage.builder()
                 .type(ChatMessageType.CONSOLE)
                 .runeLiteFormattedMessage(new ChatMessageBuilder()
@@ -217,7 +238,15 @@ public class SpecRegenCompletedPlugin extends Plugin
 
         int previous = lastEnergy;
         int energy = event.getValue();
-        lastEnergy = energy;
+        // Login sends 0 before the restored energy, so a 0 cannot be the first reading.
+        if (previous != NO_READING || energy != 0)
+        {
+            lastEnergy = energy;
+        }
+        if (log.isDebugEnabled())
+        {
+            log.debug("[spec] energy varp state={} previous={} new={}", gameState, previous, energy);
+        }
 
         // Spending energy, and the first reading of a session, are not regens.
         if (previous == NO_READING || energy <= previous)
@@ -228,27 +257,30 @@ public class SpecRegenCompletedPlugin extends Plugin
         int required = requiredEnergy();
         if (crossed(previous, energy, required))
         {
-            log.debug("[spec] crossed required={} previous={} energy={}", required, previous, energy);
+            if (log.isDebugEnabled())
+            {
+                log.debug("[spec] crossed required={} previous={} energy={}", required, previous, energy);
+            }
             play();
         }
-        else if (config.playAtFull() && previous < FULL_ENERGY && energy >= FULL_ENERGY
+        else if (previous < FULL_ENERGY && energy >= FULL_ENERGY && config.playAtFull()
             && (required > 0 || config.playAtFullWithoutSpecWeapon()))
         {
-            log.debug("[spec] bar full previous={} required={}", previous, required);
+            if (log.isDebugEnabled())
+            {
+                log.debug("[spec] full bar sound, previous={} new={} playAtFull=true required={}",
+                    previous, energy, required);
+            }
             play();
         }
     }
 
-    /**
-     * True when a regen step took the bar from below a weapon's cost to at or
-     * above it, which is the one thing that plays a sound. A required of 0 means
-     * the weapon has no special attack this plugin knows, and NO_READING means
-     * there is no earlier reading to compare against.
-     */
+    // True when a regen step took the bar from below a weapon's cost to at or above it, which is
+    // the one thing that plays a sound. A required of 0 means the weapon has no special attack this
+    // plugin knows. The caller has already returned on NO_READING.
     private static boolean crossed(int previous, int energy, int required)
     {
         return required > 0
-            && previous != NO_READING
             && previous < required
             && energy >= required;
     }
@@ -261,22 +293,25 @@ public class SpecRegenCompletedPlugin extends Plugin
             return;
         }
 
-        if (config.volume() <= 0)
+        if (play())
         {
-            log.debug("[preview] ::{} blocked, volume is 0", PREVIEW_COMMAND);
-            client.addChatMessage(ChatMessageType.GAMEMESSAGE, "",
-                "Spec Regen Completed plays nothing while its volume is 0.", null);
+            if (log.isDebugEnabled())
+            {
+                log.debug("[preview] ::{} playing", PREVIEW_COMMAND);
+            }
             return;
         }
 
-        log.debug("[preview] ::{} playing", PREVIEW_COMMAND);
-        play();
+        if (log.isDebugEnabled())
+        {
+            log.debug("[preview] ::{} blocked, volume is 0", PREVIEW_COMMAND);
+        }
+        client.addChatMessage(ChatMessageType.GAMEMESSAGE, "",
+            "Spec Regen Completed plays nothing while its volume is 0.", null);
     }
 
-    /**
-     * Energy the equipped weapon needs for one special attack, in SA_ENERGY
-     * units, or 0 when the weapon has no special attack this plugin knows of.
-     */
+    // Energy the equipped weapon needs for one special attack, in SA_ENERGY units, or 0 when the
+    // weapon has no special attack this plugin knows of.
     private int requiredEnergy()
     {
         ItemContainer worn = client.getItemContainer(InventoryID.WORN);
@@ -306,41 +341,34 @@ public class SpecRegenCompletedPlugin extends Plugin
         // still a whole number of SA_ENERGY units.
         if (client.getVarbitValue(VarbitID.TOA_MIDRAIDLOOT_ENERGY_ACTIVE) != 0)
         {
-            log.debug("[spec] liquid adrenaline active, cost {} halved", required);
+            if (log.isDebugEnabled())
+            {
+                log.debug("[spec] liquid adrenaline active, cost {} halved", required);
+            }
             return required / 2;
         }
 
         return required;
     }
 
-    private void play()
+    // Returns false only when the volume is 0, so the preview command can say so.
+    private boolean play()
     {
         int volume = config.volume();
         if (volume <= 0)
         {
             log.debug("[sound] skipped, volume is 0");
-            return;
+            return false;
         }
 
-        byte[] soundBytes = bytesFor(config.sound());
-        if (soundBytes == null)
-        {
-            return;
-        }
+        SpecSound sound = config.sound();
 
         // Squaring the slider follows perceived loudness more closely than the
         // raw fraction does.
         float amplitude = (volume / 100f) * (volume / 100f);
 
-        byte[] scaled = withAmplitude(soundBytes, amplitude);
-        byte[] clip = scaled == null ? soundBytes : scaled;
-
-        // AudioPlayer's gain runs through the mixer's MASTER_GAIN control, which
-        // not every system exposes. Scaled samples need no gain at all, so the
-        // dB figure is only for a clip this parser could not scale itself.
-        float gainDb = scaled == null ? (float) Math.max(-80.0, 20.0 * Math.log10(amplitude)) : 0f;
-
-        log.debug("[sound] playing sound={} volume={} scaled={} gainDb={}", config.sound(), volume, scaled != null, gainDb);
+        // Reading the clip from the jar and scaling it run on the executor, off
+        // the client thread.
         submit(() ->
         {
             if (!running)
@@ -349,6 +377,25 @@ public class SpecRegenCompletedPlugin extends Plugin
                 return;
             }
 
+            byte[] soundBytes = bytesFor(sound);
+            if (soundBytes == null)
+            {
+                return;
+            }
+
+            // Full volume plays the clip as it is.
+            byte[] scaled = amplitude == 1f ? soundBytes : WavAmplitude.withAmplitude(soundBytes, amplitude);
+            byte[] clip = scaled == null ? soundBytes : scaled;
+
+            // AudioPlayer's gain runs through the mixer's MASTER_GAIN control, which
+            // not every system exposes. Scaled samples need no gain at all, so the
+            // dB figure is only for a clip this parser could not scale itself.
+            float gainDb = scaled == null ? (float) Math.max(-80.0, 20.0 * Math.log10(amplitude)) : 0f;
+
+            if (log.isDebugEnabled())
+            {
+                log.debug("[sound] playing sound={} volume={} scaled={} gainDb={}", sound, volume, scaled != null, gainDb);
+            }
             try
             {
                 audioPlayer.play(new ByteArrayInputStream(clip), gainDb);
@@ -359,12 +406,11 @@ public class SpecRegenCompletedPlugin extends Plugin
                 log.warn("Could not play the special attack sound", e);
             }
         });
+        return true;
     }
 
-    /**
-     * Hands work to the shared client executor. Rejection only happens while the
-     * client is shutting down, where dropping the sound is the right outcome.
-     */
+    // Hands work to the shared client executor. Rejection only happens while the client is shutting
+    // down, where dropping the sound is the right outcome.
     private void submit(Runnable task)
     {
         try
@@ -377,10 +423,8 @@ public class SpecRegenCompletedPlugin extends Plugin
         }
     }
 
-    /**
-     * The clip bytes for a choice, read from the jar on first use and kept so a
-     * repeat play costs nothing, or null when the clip cannot be read.
-     */
+    // The clip bytes for a choice, read from the jar on first use and kept so a repeat play costs
+    // nothing, or null when the clip cannot be read.
     private byte[] bytesFor(SpecSound sound)
     {
         byte[] cached = loadedSounds.get(sound);
@@ -399,7 +443,10 @@ public class SpecRegenCompletedPlugin extends Plugin
 
             byte[] bytes = in.readAllBytes();
             loadedSounds.put(sound, bytes);
-            log.debug("[sound] loaded {} bytes={}", sound.getResource(), bytes.length);
+            if (log.isDebugEnabled())
+            {
+                log.debug("[sound] loaded {} bytes={}", sound.getResource(), bytes.length);
+            }
             return bytes;
         }
         catch (IOException e)
@@ -407,103 +454,5 @@ public class SpecRegenCompletedPlugin extends Plugin
             log.warn("Could not read {}", sound.getResource(), e);
             return null;
         }
-    }
-
-    /**
-     * Copies a RIFF/WAVE clip with every 16 bit sample multiplied by
-     * {@code amplitude}, or returns null when the bytes are not a flavour this
-     * parser handles, which leaves the caller to fall back on mixer gain.
-     */
-    private static byte[] withAmplitude(byte[] wav, float amplitude)
-    {
-        if (wav.length < 44
-            || wav[0] != 'R' || wav[1] != 'I' || wav[2] != 'F' || wav[3] != 'F'
-            || wav[8] != 'W' || wav[9] != 'A' || wav[10] != 'V' || wav[11] != 'E')
-        {
-            return null;
-        }
-
-        int dataStart = -1;
-        int dataLength = 0;
-        int bitsPerSample = 0;
-        int format = 0;
-
-        // Walk the chunk list rather than assuming the canonical 44 byte header,
-        // since an encoder is free to write chunks of its own before the samples.
-        for (int cursor = 12; cursor + 8 <= wav.length; )
-        {
-            int chunkLength = readInt(wav, cursor + 4);
-            if (chunkLength < 0)
-            {
-                return null;
-            }
-
-            int body = cursor + 8;
-            if (matches(wav, cursor, "fmt "))
-            {
-                if (chunkLength < 16 || body + 16 > wav.length)
-                {
-                    return null;
-                }
-
-                format = readShort(wav, body);
-                bitsPerSample = readShort(wav, body + 14);
-            }
-            else if (matches(wav, cursor, "data"))
-            {
-                dataStart = body;
-                dataLength = Math.min(chunkLength, wav.length - body);
-                break;
-            }
-
-            // Chunk bodies are word aligned, so an odd length carries a pad byte.
-            cursor = body + chunkLength + (chunkLength & 1);
-        }
-
-        // Format 1 is uncompressed PCM, the only one whose samples can be
-        // multiplied where they lie.
-        if (dataStart < 0 || format != 1 || bitsPerSample != 16)
-        {
-            return null;
-        }
-
-        byte[] out = wav.clone();
-        int dataEnd = dataStart + dataLength;
-        for (int i = dataStart; i + 1 < dataEnd; i += 2)
-        {
-            int sample = (short) ((out[i] & 0xff) | (out[i + 1] << 8));
-            sample = Math.round(sample * amplitude);
-            sample = Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, sample));
-            out[i] = (byte) sample;
-            out[i + 1] = (byte) (sample >> 8);
-        }
-
-        return out;
-    }
-
-    private static boolean matches(byte[] wav, int offset, String id)
-    {
-        for (int i = 0; i < id.length(); i++)
-        {
-            if (wav[offset + i] != id.charAt(i))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static int readInt(byte[] wav, int offset)
-    {
-        return (wav[offset] & 0xff)
-            | ((wav[offset + 1] & 0xff) << 8)
-            | ((wav[offset + 2] & 0xff) << 16)
-            | ((wav[offset + 3] & 0xff) << 24);
-    }
-
-    private static int readShort(byte[] wav, int offset)
-    {
-        return (wav[offset] & 0xff) | ((wav[offset + 1] & 0xff) << 8);
     }
 }
