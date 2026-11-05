@@ -58,14 +58,14 @@ public interface SpecRegenCompletedConfig extends Config
     }
 
     @ConfigItem(
-        keyName = "playAtFull",
-        name = "Play at 100% Energy",
-        description = "Additional to the Weapon depending alert",
+        keyName = "playAt",
+        name = "Play at full Energy",
+        description = "",
         position = 3
     )
-    default boolean playAtFull()
+    default PlayAt playAt()
     {
-        return false;
+        return PlayAt.BOTH;
     }
 
     @ConfigItem(

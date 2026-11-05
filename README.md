@@ -1,7 +1,7 @@
 # Spec Regen Completed
 
 Plays a sound the moment your special attack energy reaches the cost of the
-weapon you are holding.
+weapon you are holding, and by default again at full energy.
 
 The trigger is the energy crossing that weapon's cost while regenerating, so a
 dragon dagger sounds at 25 percent and an Armadyl godsword at 50 percent. It
@@ -16,8 +16,8 @@ their ornament-kit, corrupted, recoloured and charge-tier forms.
 
 ## Features
 
-- **Play at 100% Energy**: additional to the Weapon depending alert, needs a spec weapon equipped. Default `off`. A step
-  that crosses the cost and fills the bar at once plays one sound.
+- **Play at full Energy**: `Both`, `Only at full` or `Only When Weapon Ready`. Default `Both`. The full energy sound needs a
+  spec weapon equipped. A step that crosses the cost and fills the bar at once plays one sound.
 - **Also Without Spec Weapon**: any weapon or none. Default `off`.
 - **Sound**: `Sound 1` to `Sound 5`. Default `Sound 1`.
 - **Volume**: 0 to 100. Default `50`.

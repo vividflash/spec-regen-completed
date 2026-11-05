@@ -74,9 +74,10 @@ public class SpecRegenCompletedPlugin extends Plugin
 
     private static final String LAST_SEEN_VERSION_KEY = "lastSeenVersion";
 
-    private static final String VERSION = "1.2";
+    private static final String VERSION = "1.3";
     private static final String UPDATE_MESSAGE =
-        "Spec Regen Completed v" + VERSION + ": Added 10 Weapons";
+        "Spec Regen Completed v" + VERSION
+            + ": Now also plays at full Energy by Default";
 
     private static final Color NOTICE_COLOR = new Color(0x480000);
 
@@ -255,7 +256,15 @@ public class SpecRegenCompletedPlugin extends Plugin
         }
 
         int required = requiredEnergy();
-        if (crossed(previous, energy, required))
+        boolean ready = crossed(previous, energy, required);
+        boolean full = previous < FULL_ENERGY && energy >= FULL_ENERGY;
+        if (!ready && !full)
+        {
+            return;
+        }
+
+        PlayAt mode = config.playAt();
+        if (ready && mode != PlayAt.ONLY_FULL)
         {
             if (log.isDebugEnabled())
             {
@@ -263,21 +272,21 @@ public class SpecRegenCompletedPlugin extends Plugin
             }
             play();
         }
-        else if (previous < FULL_ENERGY && energy >= FULL_ENERGY && config.playAtFull()
+        else if (full && mode != PlayAt.ONLY_WEAPON_READY
             && (required > 0 || config.playAtFullWithoutSpecWeapon()))
         {
             if (log.isDebugEnabled())
             {
-                log.debug("[spec] full bar sound, previous={} new={} playAtFull=true required={}",
-                    previous, energy, required);
+                log.debug("[spec] full bar sound, previous={} new={} mode={} required={}",
+                    previous, energy, mode, required);
             }
             play();
         }
     }
 
-    // True when a regen step took the bar from below a weapon's cost to at or above it, which is
-    // the one thing that plays a sound. A required of 0 means the weapon has no special attack this
-    // plugin knows. The caller has already returned on NO_READING.
+    // True when a regen step took the bar from below a weapon's cost to at or above it. A required
+    // of 0 means the weapon has no special attack this plugin knows. The caller has already
+    // returned on NO_READING.
     private static boolean crossed(int previous, int energy, int required)
     {
         return required > 0
